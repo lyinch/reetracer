@@ -11,13 +11,10 @@
 #include <thread>
 #include <mutex>
 
-color ray_color(const ray& r,  const color &background, const hittable& world, int depth) {
+color ray_color(const ray& r,  const color &background, const hittable& world) {
     hit_record rec;
 
-    if (depth <= 0)
-        return {0,0,0};
-
-    if (!world.hit(r, 0.001, infinity, rec))
+    if (!world.hit(r, 0, infinity, rec))
         return background;
 
     ray scattered;
@@ -27,7 +24,7 @@ color ray_color(const ray& r,  const color &background, const hittable& world, i
     if(!rec.mat_ptr->scatter(r, rec, attenuation, scattered))
         return emitted;
 
-    return emitted + attenuation * ray_color(scattered, background, world, depth-1);
+    return emitted + attenuation;
 }
 
 hittable_list generate_scene() {
@@ -48,15 +45,14 @@ hittable_list generate_scene() {
 }
 
 int main() {
-    size_t num_threads = 4;
+    size_t num_threads = 1;
 
     // Image
     const auto aspect_ratio = 3.0 / 2.0;
     const int image_width = 600;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
-    const int samples_per_pixel = 512;
+    const int samples_per_pixel = 64;
     assert(samples_per_pixel%num_threads == 0);
-    const int max_depth = 10;
 
     // World
     color background(0,0,0);
@@ -87,7 +83,7 @@ int main() {
                     auto u = (i + random_double()) / (image_width-1);
                     auto v = (j + random_double()) / (image_height-1);
                     ray r = cam.get_ray(u, v);
-                    pixel_color_t += ray_color(r, background, world, max_depth);
+                    pixel_color_t += ray_color(r, background, world);
                 }
                 const std::lock_guard<std::mutex> lock(m);
                 pixel_color += pixel_color_t;
